@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_2x2_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/bg_widget_shape"
+    android:padding="12dp"
+    android:gravity="center">
+
+    <TextView
+        android:id="@+id/widget_2x2_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="BÁO THỨC SINH HỌC"
+        android:textColor="#818CF8"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.05"
+        android:gravity="center" />
+
+    <TextView
+        android:id="@+id/widget_2x2_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="6dp"
+        android:text="Chưa đặt báo thức"
+        android:textColor="#F8FAFC"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:gravity="center" />
+
+    <!-- Choice of Cycles 2, 3, 4 -->
+    <LinearLayout
+        android:id="@+id/layout_cycles_2x2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="6dp"
+        android:weightSum="3">
+
+        <TextView
+            android:id="@+id/btn_cycles_3_2x2"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:text="3 CK"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/bg_btn_cycles_3"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginEnd="4dp"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <TextView
+            android:id="@+id/btn_cycles_4_2x2"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:text="4 CK"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/bg_btn_cycles_4"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginEnd="4dp"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <TextView
+            android:id="@+id/btn_cycles_5_2x2"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:text="5 CK"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/bg_btn_cycles_5"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/btn_set_bio_2x2"
+        android:layout_width="match_parent"
+        android:layout_height="38dp"
+        android:text="Đặt Báo Thức Sinh Học"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/bg_btn_set_bio"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true" />
+
+</LinearLayout>

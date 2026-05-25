@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/bg_widget_shape"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="BÁO THỨC SINH HỌC"
+        android:textColor="#818CF8"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1"
+        android:gravity="center_horizontal" />
+
+    <TextView
+        android:id="@+id/widget_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Trạng thái: Chưa bật"
+        android:textColor="#F8FAFC"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:gravity="center" />
+
+    <TextView
+        android:id="@+id/widget_details"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Đặt nhanh chu kỳ ngủ bên dưới"
+        android:textColor="#94A3B8"
+        android:textSize="9sp"
+        android:gravity="center"
+        android:layout_marginTop="2dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="10dp"
+        android:weightSum="2">
+
+        <Button
+            android:id="@+id/btn_cycles_3"
+            android:layout_width="0dp"
+            android:layout_height="34dp"
+            android:layout_weight="1"
+            android:text="3 Chu Kỳ (4.5h)"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#312E81"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            android:layout_marginRight="4dp"
+            style="?android:attr/buttonStyleSmall" />
+
+        <Button
+            android:id="@+id/btn_cycles_4"
+            android:layout_width="0dp"
+            android:layout_height="34dp"
+            android:layout_weight="1"
+            android:text="4 Chu Kỳ (6.0h)"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#111827"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            android:layout_marginLeft="4dp"
+            style="?android:attr/buttonStyleSmall" />
+    </LinearLayout>
+
+</LinearLayout>

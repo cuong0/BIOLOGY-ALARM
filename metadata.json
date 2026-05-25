@@ -1,0 +1,6 @@
+{
+  "name": "Báo Thức Sinh Học",
+  "description": "Ứng dụng báo thức chu kỳ giấc ngủ khoa học giúp thức dậy sảng khoái và tỉnh táo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
