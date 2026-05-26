@@ -77,11 +77,12 @@ class Widget2x2Provider : AppWidgetProvider() {
                 }
             }
             "com.example.widget.ACTION_SET_BIO_2X2" -> {
-                targetSource = "bio"
-                targetCycles = 5
-                isBio = true
-                if (isAlarmActive && effectiveActiveSource == "bio") {
+                if (isAlarmActive) {
                     shouldCancel = true
+                } else {
+                    targetSource = "bio"
+                    targetCycles = 5
+                    isBio = true
                 }
             }
             else -> return
@@ -103,21 +104,18 @@ class Widget2x2Provider : AppWidgetProvider() {
             
             Toast.makeText(context, "Đã tắt báo thức", Toast.LENGTH_SHORT).show()
         } else {
-            val sleepMinutes = (targetCycles * 90) + 10 // 10 minutes to fall asleep
+            val sleepMinutes = (targetCycles * 90) + currentAlarm.fallAsleepMinutes
             val triggerTimeMs = System.currentTimeMillis() + (sleepMinutes * 60 * 1000)
             
             val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
             val alarmTimeString = sdf.format(Date(triggerTimeMs))
 
             // Save to AlarmStorage
-            val newAlarm = AlarmConfig(
-                id = 1,
+            val newAlarm = currentAlarm.copy(
                 triggerTimeMs = triggerTimeMs,
                 cycles = targetCycles,
-                fallAsleepMinutes = 10,
-                isEnabled = true,
-                ringtoneName = "Mặc định hệ thống",
-                alarmType = "single"
+                // fallAsleepMinutes is preserved 
+                isEnabled = true
             )
             storage.saveAlarm(newAlarm)
             prefs.edit().putString("widget_2x2_active_source", targetSource).apply()
@@ -241,9 +239,10 @@ class Widget2x2Provider : AppWidgetProvider() {
             views.setInt(R.id.btn_set_bio_2x2, "setBackgroundResource", R.drawable.bg_btn_set_bio)
             views.setTextColor(R.id.btn_set_bio_2x2, android.graphics.Color.WHITE)
 
-            // Highlight the active button if there is a running alarm
-            if (isAlarmActive) {
-                val darkRose = android.graphics.Color.parseColor("#9D174D") // Beautiful dark pink text color
+            // Highlight the active button if there is a selected source in prefs
+            val darkRose = android.graphics.Color.parseColor("#9D174D") // Beautiful dark pink text color
+
+            if (effectiveActiveSource.isNotEmpty()) {
                 when (effectiveActiveSource) {
                     "cycles_3" -> {
                         views.setInt(R.id.btn_cycles_3_2x2, "setBackgroundResource", R.drawable.bg_btn_active_pink_6dp)
@@ -258,11 +257,18 @@ class Widget2x2Provider : AppWidgetProvider() {
                         views.setTextColor(R.id.btn_cycles_5_2x2, darkRose)
                     }
                     "bio" -> {
-                        views.setTextViewText(R.id.btn_set_bio_2x2, "Tắt Báo Thức")
                         views.setInt(R.id.btn_set_bio_2x2, "setBackgroundResource", R.drawable.bg_btn_active_pink_8dp)
                         views.setTextColor(R.id.btn_set_bio_2x2, darkRose)
                     }
                 }
+            }
+
+            // Additional UI updates if an alarm is actually active
+            if (isAlarmActive) {
+                // Set Bio button as the Off button
+                views.setTextViewText(R.id.btn_set_bio_2x2, "Tắt Báo Thức")
+                views.setInt(R.id.btn_set_bio_2x2, "setBackgroundResource", R.drawable.bg_btn_active_pink_8dp)
+                views.setTextColor(R.id.btn_set_bio_2x2, darkRose)
             }
 
             // Click pending intents configuration

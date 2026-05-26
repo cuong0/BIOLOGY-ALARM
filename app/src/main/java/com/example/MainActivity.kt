@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.Geocoder
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -275,10 +276,15 @@ fun SleepCycleScreen(
 
     var userLatitude by remember { mutableStateOf<Double?>(null) }
     var userLongitude by remember { mutableStateOf<Double?>(null) }
+    var districtName by remember { mutableStateOf<String?>(null) }
     
-    // Weather States
-    var weatherInfo by remember { mutableStateOf<WeatherInfo?>(null) }
+    // Real-time Weather
+    var currentWeatherInfo by remember { mutableStateOf<WeatherInfo?>(null) }
     var isWeatherLoading by remember { mutableStateOf(false) }
+
+    // Alarm Time Weather
+    var alarmWeatherInfo by remember { mutableStateOf<WeatherInfo?>(null) }
+    var isAlarmWeatherLoading by remember { mutableStateOf(false) }
 
     // Time Calculations
     val currentTime = remember { System.currentTimeMillis() }
@@ -316,12 +322,24 @@ fun SleepCycleScreen(
                 if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                     ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                     
-                    fusedLocationClient.lastLocation.addOnSuccessListener { loc: Location? ->
-                        if (loc != null) {
-                            userLatitude = loc.latitude
-                            userLongitude = loc.longitude
+                        fusedLocationClient.lastLocation.addOnSuccessListener { loc: Location? ->
+                            if (loc != null) {
+                                userLatitude = loc.latitude
+                                userLongitude = loc.longitude
+                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    try {
+                                        val geocoder = Geocoder(context.applicationContext, Locale("vi", "VN"))
+                                        val addresses = geocoder.getFromLocation(loc.latitude, loc.longitude, 1)
+                                        val subAdmin = addresses?.firstOrNull()?.subAdminArea
+                                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                            districtName = subAdmin
+                                        }
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }
+                            }
                         }
-                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -367,7 +385,7 @@ fun SleepCycleScreen(
             hasRequestedPermissions = true
             try {
                 // Settle down UI thread before requesting
-                kotlinx.coroutines.delay(1000)
+                kotlinx.coroutines.delay(300)
                 val permissions = mutableListOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION
@@ -382,16 +400,24 @@ fun SleepCycleScreen(
         }
     }
 
-    // Refresh weather whenever alarm time changes or location changes
+    // Refresh current weather whenever location changes
+    LaunchedEffect(userLatitude, userLongitude) {
+        if (userLatitude != null && userLongitude != null) {
+            kotlinx.coroutines.delay(1000)
+            isWeatherLoading = true
+            currentWeatherInfo = WeatherService.getCurrentWeather(userLatitude, userLongitude)
+            isWeatherLoading = false
+        }
+    }
+
+    // Refresh alarm weather whenever alarm time changes or location changes
     LaunchedEffect(computedAlarmTimeMs, userLatitude, userLongitude) {
-        isWeatherLoading = true
-        weatherInfo = WeatherService.getEstimatedWeather(
-            context,
-            userLatitude,
-            userLongitude,
-            computedAlarmTimeMs
-        )
-        isWeatherLoading = false
+        if (userLatitude != null && userLongitude != null) {
+            kotlinx.coroutines.delay(1000)
+            isAlarmWeatherLoading = true
+            alarmWeatherInfo = WeatherService.getEstimatedWeather(context, userLatitude, userLongitude, computedAlarmTimeMs)
+            isAlarmWeatherLoading = false
+        }
     }
 
     // RINGTONE DIALOG
@@ -850,7 +876,7 @@ fun SleepCycleScreen(
                 }
 
                 // Floating Weather Widget overlapping the bottom edge of the clock
-                val currentForecast = weatherInfo
+                val alarmForecast = alarmWeatherInfo
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xEA111622)),
                     shape = RoundedCornerShape(16.dp),
@@ -864,21 +890,21 @@ fun SleepCycleScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (isWeatherLoading) {
+                        if (isAlarmWeatherLoading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(14.dp),
                                 strokeWidth = 1.5.dp,
                                 color = Color(0xFF818CF8)
                             )
                         } else {
-                            val weatherIcon = when (currentForecast?.type) {
+                            val weatherIcon = when (alarmForecast?.type) {
                                 "sunny" -> Icons.Default.WbSunny
                                 "rainy" -> Icons.Default.WaterDrop
                                 "windy" -> Icons.Default.Air
                                 "thunderstorm" -> Icons.Default.Thunderstorm
                                 else -> Icons.Default.Cloud
                             }
-                            val iconColor = when (currentForecast?.type) {
+                            val iconColor = when (alarmForecast?.type) {
                                 "sunny" -> Color(0xFFFBBF24)
                                 "rainy" -> Color(0xFF60A5FA)
                                 "windy" -> Color(0xFFCBD5E1)
@@ -902,10 +928,10 @@ fun SleepCycleScreen(
                                 color = Color(0xFF64748B),
                                 lineHeight = 10.sp
                             )
-                            val weatherString = if (currentForecast != null) {
-                                "${currentForecast.temperature}°C • ${currentForecast.description}"
+                            val weatherString = if (alarmForecast != null) {
+                                "${alarmForecast.temperature}°C • ${alarmForecast.description}"
                             } else {
-                                "24°C • Nắng nhẹ"
+                                "..."
                             }
                             Text(
                                 text = weatherString,
@@ -1247,19 +1273,12 @@ fun SleepCycleScreen(
                           )
                           Spacer(modifier = Modifier.width(8.dp))
                           Text(
-                              text = "Liên Kết Tọa Độ Vệ Tinh",
+                              text = "Vị trí hiện tại của bạn",
                               fontWeight = FontWeight.Bold,
                               fontSize = 14.sp,
                               color = Color.White
                           )
                           Spacer(modifier = Modifier.weight(1f))
-                          Text(
-                              text = "GPS LOCK",
-                              fontSize = 9.sp,
-                              fontWeight = FontWeight.Black,
-                              color = Color(0xFF38BDF8),
-                              letterSpacing = 1.sp
-                          )
                       }
                       
                       Spacer(modifier = Modifier.height(12.dp))
@@ -1272,27 +1291,45 @@ fun SleepCycleScreen(
                           ) {
                               Column {
                                   Text(
-                                      text = "Tọa độ vệ tinh đã nạp",
+                                      text = "Huyện hiện tại",
                                       color = Color(0xFF64748B),
                                       fontSize = 11.sp
                                   )
                                   Text(
-                                      text = String.format(Locale.US, "Lat: %.4f • Lon: %.4f", userLatitude, userLongitude),
+                                      text = districtName ?: "Đang xác định...",
                                       color = Color(0xFFE2E8F0),
                                       fontSize = 13.sp,
                                       fontWeight = FontWeight.Medium
                                   )
                               }
-                              Text(
-                                  text = "Đã đồng bộ",
-                                  color = Color(0xFF10B981),
-                                  fontSize = 11.sp,
-                                  fontWeight = FontWeight.Bold,
-                                  modifier = Modifier
-                                      .background(Color(0x1B10B981), RoundedCornerShape(12.dp))
-                                      .border(1.dp, Color(0xFF10B981).copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                                      .padding(horizontal = 8.dp, vertical = 4.dp)
-                              )
+                              
+                              // Real-Time Weather Display
+                              if (isWeatherLoading) {
+                                  CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                              } else if (currentWeatherInfo != null) {
+                                  Column(horizontalAlignment = Alignment.End) {
+                                      Row(verticalAlignment = Alignment.CenterVertically) {
+                                          Icon(
+                                              imageVector = Icons.Default.Cloud,
+                                              contentDescription = null,
+                                              tint = Color.White,
+                                              modifier = Modifier.size(16.dp)
+                                          )
+                                          Spacer(modifier = Modifier.width(4.dp))
+                                          Text(
+                                              text = "${currentWeatherInfo!!.temperature}°C",
+                                              color = Color.White,
+                                              fontSize = 16.sp,
+                                              fontWeight = FontWeight.Bold
+                                          )
+                                      }
+                                      Text(
+                                          text = currentWeatherInfo!!.description,
+                                          color = Color(0xFF64748B),
+                                          fontSize = 10.sp
+                                      )
+                                  }
+                              }
                           }
                       } else {
                           Text(
