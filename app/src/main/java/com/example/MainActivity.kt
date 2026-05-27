@@ -350,6 +350,22 @@ fun SleepCycleScreen(
     // Sync state on Resume (to catch cancellations/changes from external widgets)
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
 
+    // Profile state
+    var userName by remember { mutableStateOf(alarmStorage.getUserName()) }
+    var userAvatarUri by remember { mutableStateOf(alarmStorage.getUserAvatarUri()) }
+    var showNameDialog by remember { mutableStateOf(false) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            userAvatarUri = uri.toString()
+            alarmStorage.setUserAvatarUri(uri.toString())
+            // Persist permission for the URI
+            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
+
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
@@ -1866,25 +1882,70 @@ fun SleepCycleScreen(
                                 .size(80.dp)
                                 .clip(CircleShape)
                                 .background(Color(0x33818CF8))
-                                .border(1.5.dp, Color(0xFF818CF8), CircleShape),
+                                .border(1.5.dp, Color(0xFF818CF8), CircleShape)
+                                .clickable { imagePickerLauncher.launch("image/*") },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "Avatar",
-                                tint = Color(0xFF818CF8),
-                                modifier = Modifier.size(40.dp)
-                            )
+                            if (userAvatarUri.isNotEmpty()) {
+                                coil.compose.AsyncImage(
+                                    model = userAvatarUri,
+                                    contentDescription = "Avatar",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "Avatar",
+                                    tint = Color(0xFF818CF8),
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
                         }
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         Text(
-                            text = "cuongvip78910@gmail.com",
+                            text = userName,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = Color.White,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { showNameDialog = true }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         )
+                        
+                        // Name Change Dialog
+                        if (showNameDialog) {
+                            var tempName by remember { mutableStateOf(userName) }
+                            AlertDialog(
+                                onDismissRequest = { showNameDialog = false },
+                                title = { Text("Đổi tên") },
+                                text = {
+                                    OutlinedTextField(
+                                        value = tempName,
+                                        onValueChange = { tempName = it },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        userName = tempName
+                                        alarmStorage.setUserName(tempName)
+                                        showNameDialog = false
+                                    }) {
+                                        Text("Lưu")
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showNameDialog = false }) {
+                                        Text("Hủy")
+                                    }
+                                }
+                            )
+                        }
                         
                         Text(
                             text = "Người dùng Báo Thức Sinh Học",
@@ -1904,7 +1965,7 @@ fun SleepCycleScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(text = "Phiên bản ứng dụng", fontSize = 13.sp, color = Color(0xFFCBD5E1))
-                            Text(text = "v1.0.0", fontSize = 13.sp, color = Color(0xFF818CF8), fontWeight = FontWeight.Bold)
+                            Text(text = "V2.0.6", fontSize = 13.sp, color = Color(0xFF818CF8), fontWeight = FontWeight.Bold)
                         }
                         
                         Spacer(modifier = Modifier.height(12.dp))
@@ -1924,7 +1985,7 @@ fun SleepCycleScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(text = "Bản quyền", fontSize = 13.sp, color = Color(0xFFCBD5E1))
-                            Text(text = "© 2026 AI Studio", fontSize = 13.sp, color = Color(0xFF64748B))
+                            Text(text = "© 2026 cường lâm", fontSize = 13.sp, color = Color(0xFF64748B))
                         }
                     }
                 }

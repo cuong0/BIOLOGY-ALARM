@@ -63,4 +63,20 @@ class AlarmStorage(context: Context) {
     fun setRepeatCount(count: Int) {
         prefs.edit().putInt("repeat_count", count).apply()
     }
+
+    fun getUserName(): String {
+        return prefs.getString("user_name", "Người dùng") ?: "Người dùng"
+    }
+
+    fun setUserName(name: String) {
+        prefs.edit().putString("user_name", name).apply()
+    }
+
+    fun getUserAvatarUri(): String {
+        return prefs.getString("user_avatar_uri", "") ?: ""
+    }
+
+    fun setUserAvatarUri(uri: String) {
+        prefs.edit().putString("user_avatar_uri", uri).apply()
+    }
 }
