@@ -27,6 +27,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
@@ -45,6 +46,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -355,15 +358,74 @@ fun SleepCycleScreen(
     var userAvatarUri by remember { mutableStateOf(alarmStorage.getUserAvatarUri()) }
     var showNameDialog by remember { mutableStateOf(false) }
 
+    // New Avatar Editing State
+    var candidateAvatarUri by remember { mutableStateOf<Uri?>(null) }
+    var showAvatarEditor by remember { mutableStateOf(false) }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            userAvatarUri = uri.toString()
-            alarmStorage.setUserAvatarUri(uri.toString())
-            // Persist permission for the URI
-            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            candidateAvatarUri = uri
+            showAvatarEditor = true
         }
+    }
+
+    if (showAvatarEditor && candidateAvatarUri != null) {
+        // Avatar Editor Dialog with Zoom/Pan
+        var scale by remember { mutableStateOf(1f) }
+        var offset by remember { mutableStateOf(Offset.Zero) }
+
+        AlertDialog(
+            onDismissRequest = { showAvatarEditor = false },
+            title = { Text("Chỉnh sửa ảnh đại diện") },
+            text = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.Black)
+                        .pointerInput(Unit) {
+                            detectTransformGestures { _, pan, zoom, _ ->
+                                scale *= zoom
+                                offset += pan
+                            }
+                        }
+                ) {
+                    coil.compose.AsyncImage(
+                        model = candidateAvatarUri,
+                        contentDescription = "Edit Avatar",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale,
+                                translationX = offset.x,
+                                translationY = offset.y
+                            ),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val uriString = candidateAvatarUri.toString()
+                    userAvatarUri = uriString
+                    alarmStorage.setUserAvatarUri(uriString)
+                    // Persist permission for the URI
+                    context.contentResolver.takePersistableUriPermission(candidateAvatarUri!!, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    showAvatarEditor = false
+                }) {
+                    Text("Lưu")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAvatarEditor = false }) {
+                    Text("Hủy")
+                }
+            }
+        )
     }
 
     DisposableEffect(lifecycleOwner) {
