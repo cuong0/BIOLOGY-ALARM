@@ -206,16 +206,16 @@ fun SleepCycleScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // State Variables
-    var currentTab by remember { mutableStateOf(0) } // 0 = Báo thức, 1 = Thống kê, 2 = Cá nhân
-    var cycles by remember { mutableStateOf(3) } // 1 cycle = 90 mins, default is 3
-    var fallAsleepMinutes by remember { mutableStateOf(0) } // 0, 5, 10 or 15 mins
-    var selectedRingtoneName by remember { mutableStateOf("Mặc định hệ thống") }
-    var selectedRingtoneUri by remember { mutableStateOf("") }
-    
     // Loaded alarm configuration status
     var initialAlarm by remember { mutableStateOf(alarmStorage.getAlarm()) }
     var isAlarmScheduled by remember { mutableStateOf(initialAlarm.isEnabled && initialAlarm.triggerTimeMs > System.currentTimeMillis()) }
+
+    // State Variables
+    var currentTab by remember { mutableStateOf(0) } // 0 = Báo thức, 1 = Thống kê, 2 = Cá nhân
+    var cycles by remember { mutableStateOf(initialAlarm.cycles) } // 1 cycle = 90 mins, default from saved alarm
+    var fallAsleepMinutes by remember { mutableStateOf(initialAlarm.fallAsleepMinutes) } // 0, 5, 10 or 15 mins
+    var selectedRingtoneName by remember { mutableStateOf(initialAlarm.ringtoneName) }
+    var selectedRingtoneUri by remember { mutableStateOf(initialAlarm.ringtoneUri) }
 
     var alarmType by remember { mutableStateOf(initialAlarm.alarmType) }
     var selectedDays by remember {
@@ -297,20 +297,19 @@ fun SleepCycleScreen(
     val dateFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val finalAlarmTimeFormatted = dateFormat.format(Date(computedAlarmTimeMs))
     
-    // Synchronize states upon initial loading
-    LaunchedEffect(Unit) {
-        if (isAlarmScheduled) {
-            cycles = initialAlarm.cycles
-            fallAsleepMinutes = initialAlarm.fallAsleepMinutes
-            selectedRingtoneName = initialAlarm.ringtoneName
-            selectedRingtoneUri = initialAlarm.ringtoneUri
-            alarmType = initialAlarm.alarmType
-            selectedDays = if (initialAlarm.daysOfWeek.isNotEmpty()) {
-                initialAlarm.daysOfWeek.split(",").mapNotNull { it.toIntOrNull() }.toSet()
-            } else {
-                emptySet()
-            }
-        }
+    // Proactively save options when selected/updated by the user to be used as default next time
+    LaunchedEffect(cycles, fallAsleepMinutes, selectedRingtoneName, selectedRingtoneUri, alarmType, selectedDays) {
+        val daysOfWeekStr = selectedDays.joinToString(",")
+        val currentSavedAlarm = alarmStorage.getAlarm()
+        val updatedConfig = currentSavedAlarm.copy(
+            cycles = cycles,
+            fallAsleepMinutes = fallAsleepMinutes,
+            ringtoneName = selectedRingtoneName,
+            ringtoneUri = selectedRingtoneUri,
+            alarmType = alarmType,
+            daysOfWeek = daysOfWeekStr
+        )
+        alarmStorage.saveAlarm(updatedConfig)
     }
 
     // Dynamic Location & Weather Estimation
@@ -383,7 +382,7 @@ fun SleepCycleScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(300.dp)
+                        .aspectRatio(1f)
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color.Black)
                         .pointerInput(Unit) {
@@ -406,6 +405,18 @@ fun SleepCycleScreen(
                             ),
                         contentScale = androidx.compose.ui.layout.ContentScale.Fit
                     )
+                    
+                    // Grid Overlay
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val strokeWidth = 1.dp.toPx()
+                        val color = Color.White.copy(alpha = 0.5f)
+                        // Vertical lines
+                        drawLine(color, Offset(size.width / 3, 0f), Offset(size.width / 3, size.height), strokeWidth)
+                        drawLine(color, Offset(2 * size.width / 3, 0f), Offset(2 * size.width / 3, size.height), strokeWidth)
+                        // Horizontal lines
+                        drawLine(color, Offset(0f, size.height / 3), Offset(size.width, size.height / 3), strokeWidth)
+                        drawLine(color, Offset(0f, 2 * size.height / 3), Offset(size.width, 2 * size.height / 3), strokeWidth)
+                    }
                 }
             },
             confirmButton = {
@@ -435,17 +446,15 @@ fun SleepCycleScreen(
                 initialAlarm = freshAlarm
                 val isActive = freshAlarm.isEnabled && freshAlarm.triggerTimeMs > System.currentTimeMillis()
                 isAlarmScheduled = isActive
-                if (isActive) {
-                    cycles = freshAlarm.cycles
-                    fallAsleepMinutes = freshAlarm.fallAsleepMinutes
-                    selectedRingtoneName = freshAlarm.ringtoneName
-                    selectedRingtoneUri = freshAlarm.ringtoneUri
-                    alarmType = freshAlarm.alarmType
-                    selectedDays = if (freshAlarm.daysOfWeek.isNotEmpty()) {
-                        freshAlarm.daysOfWeek.split(",").mapNotNull { it.toIntOrNull() }.toSet()
-                    } else {
-                        emptySet()
-                    }
+                cycles = freshAlarm.cycles
+                fallAsleepMinutes = freshAlarm.fallAsleepMinutes
+                selectedRingtoneName = freshAlarm.ringtoneName
+                selectedRingtoneUri = freshAlarm.ringtoneUri
+                alarmType = freshAlarm.alarmType
+                selectedDays = if (freshAlarm.daysOfWeek.isNotEmpty()) {
+                    freshAlarm.daysOfWeek.split(",").mapNotNull { it.toIntOrNull() }.toSet()
+                } else {
+                    emptySet()
                 }
             }
         }
